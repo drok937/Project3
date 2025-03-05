@@ -17,6 +17,7 @@ const enableAudio = function() {
     sawOsc.start();
     lFOOsc.start();
     modOsc.start();
+    modOffset.start();
 };
 
 //Updates the master gain based on the fader input.
@@ -34,7 +35,7 @@ const updateLFOFreq = function (){
 // Updates LFO depth based on slider
 const updateLFODepth = function (){
     lFODepthLabel.innerText = `${lFODepthSlider.value}`
-    lFODepth.gain.setValueAtTime(lFODepthSlider.value / 100, audCtx.currentTime);
+    lFODepth.gain.setValueAtTime(lFODepthSlider.value / 1, audCtx.currentTime);
 };
 // Updates the delay time based on the slider input.
 const updateDelay = function(){
@@ -50,8 +51,8 @@ const updateModFreq = function (){
 
 // Updates modulation depth based on slider
 const updateModDepth = function (){
-    modDepthLabel.innerText = `${modDepthSlider.value}`
-    modDepth.gain.setValueAtTime(modDepthSlider.value / 100, audCtx.currentTime);
+    modDepthLabel.innerText = `${modDepthSlider.value * 100}%`
+    modDepth.gain.exponentialRampToValueAtTime(modDepthSlider.value / 100, audCtx.currentTime + 0.2);
 };
 
 
@@ -87,9 +88,20 @@ lFODepth.gain.setValueAtTime(0.0, audCtx.currentTime);
 let modOsc = audCtx.createOscillator();
 modOsc.type = "sine"
 modOsc.frequency.setValueAtTime(5.0, audCtx.currentTime);
+
+//--------------------------Modulation Offset----------------------
+
+let modOffset = audCtx.createConstantSource();
+modOffset.offset.value = 1;
+
+//--------------------------Modulation Scaling----------------------
+let modScaled = audCtx.createGain();
+modScaled.gain.value = 0.5;
+
 //---------------------------Modulation Depth----------------------
 let modDepth = audCtx.createGain();
 modDepth.gain.setValueAtTime(0.0, audCtx.currentTime);
+
 // ------------------------- Delay node --------------------------
 let delay = audCtx.createDelay();
 delay.delayTime.setValueAtTime(0.125, audCtx.currentTime);
@@ -112,8 +124,13 @@ lFOOsc.connect(lFODepth)
 lFODepth.connect(sawOsc.frequency)
 delay.connect(masterGain);
 delay.connect(fb);
-modOsc.connect(modDepth);
+fb.connect(delay);
+
+modOsc.connect(modScaled);
+modOffset.connect(modScaled);
+modScaled.connect(modDepth);
 modDepth.connect(delay.delayTime);
+
 masterGain.connect(audCtx.destination);
 
 
